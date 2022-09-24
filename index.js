@@ -74,6 +74,7 @@ function getDownLink(cartoonName, episodeNumber) {
     resultStr=`————————————————————${cartoonName}第${episodeNumber}集————————————————————\n${downStr}\n`;
     return resultStr;
 }
+
 //获取番剧下载信息
 async function getDownInfo(selectCartoon) {
     let url = selectCartoon.cartoonDPage;
@@ -180,21 +181,22 @@ async function getCartoonInfo() {
     let url = `${homeUrl}/Home/Search?searchstr=${encodeURI(searchName)}`;
     let res = await fetch(url);
     let body = await res.text();
-    let searchstr = utf8ToUnicode(searchName);
-    let cartoonReg = new RegExp(`title="${searchstr}(\\s(&#x\\S+)+;)?"`, "g");
+    let $ = cheerio.load(body);
     //搜索番剧结果链接 
     body.match(/\/Home\/Bangumi\/\d+/g).map(index => {
         linkStrs.push(homeUrl + (index.replace("'", "")));
     });
-
-    let result = body.match(cartoonReg);
+    let result=new Array();
+    $('.an-info-group .an-text').each(function (i, elem) {
+        result.push($(this).text());
+     });
     if(isEmpty(result))
     {
         console.log(`没有名字为${searchName}的番剧，请输入正确名字`);
         return;
     }
     for (let i = 0; i < result.length; i++) {
-        let cartoonsName = unicodeToUtf8(result[i].replace(/title="|"/g, ""));
+        let cartoonsName =result[i];
         cartoonsNames.push(cartoonsName);
         searchResult.set(cartoonsName, linkStrs[i]);
     }
