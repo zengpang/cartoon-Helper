@@ -1,6 +1,6 @@
 {
   "name": "mikan-crawler",
-  "version": "1.0.7",
+  "version": "1.0.9",
   "description": "mikan计划是一个动漫网站，而mikan-crawler爬虫可以根据用户输入的番剧名爬取mikan动漫网站上的下载链接并存储于本地",
   "main": "index.js",
   "bin":{
