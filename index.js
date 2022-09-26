@@ -49,7 +49,7 @@ function getDownLink(cartoonName, episodeNumber) {
     let downStr = "";
     let resultStr = "";
     let numberKeys = Array.from(cartoonDowns.keys());
-    // let eCount = 1;
+     let eCount = 1;
 
     numberKeys.forEach(index => {
 
@@ -57,14 +57,14 @@ function getDownLink(cartoonName, episodeNumber) {
         if (number == -1) {
             number = 1;
         }
-        // if (eCount > downCount) {
+        if (eCount > downCount) {
 
-        //     return;
-        // }
+            return;
+        }
         if (number == episodeNumber) {
 
             downStr += `${cartoonDowns.get(index)}\n`;
-            // eCount++;
+             eCount++;
         }
     });
 
@@ -82,7 +82,7 @@ async function getDownLinks(url, subtitleName) {
     let downLinks = new Array();
     let cartoonInfoCount = 0;
     $('table.table.table-striped.tbl-border.fadeIn tbody tr td:nth-child(1)').each(function (i, elem) {
-        let cartoonInfo = $(this).children(".magnet-link-wrap").text().match(/(- (\d)(\d)*)|(\[(\d)(\d)*\])/g);
+        let cartoonInfo = $(this).children(".magnet-link-wrap").text().match(/(- (\d)(\d)*)|((\[(\d)(\d)*\])|(【(\d)(\d)*】))/g);
         let downLink = $(this).children(".js-magnet.magnet-link").data('clipboard-text');
         //[ '[06]' ]
         if (downLink != null) {
@@ -92,7 +92,7 @@ async function getDownLinks(url, subtitleName) {
         }
         if (cartoonInfo != null && downLink != null) {
 
-            let episodeNumber = cartoonInfo[0].replace(/(- )|((\[)|(\]))/g, "");
+            let episodeNumber = cartoonInfo[0].replace(/(- )|((\[)|(\])|(【)|(】))/g, "");
             //获取最新集数
             let number = parseInt(episodeNumber);
             if (number > episodeCount) {
@@ -136,7 +136,11 @@ function Linkhandle(cName) {
     //获取下载集数
     const getECount = new NumberPrompt({
         name: 'EpisodeCount',
-        message: `选择集数:请选择1到${episodeCount}(最新集数，超出边界的数字视为边界值)`
+        message: `输入下载集数:请输入1到${episodeCount}(最新集数，超出边界的数字视为边界值)`
+    });
+    const getDCount = new NumberPrompt({
+        name: 'EpisodeDount',
+        message: `选择每集下载数量:(至少1集，最多集数受资源数量，超出边界的数字视为边界值)`
     });
     getECount.run()
         .then(
@@ -145,11 +149,19 @@ function Linkhandle(cName) {
                     count = (count < 1 ? 1 : episodeCount);
                 }
                 downepisodeNumber = count;
-                let downStrs = "";
-                for (let episodeNumber = 1; episodeNumber <= downepisodeNumber; episodeNumber++) {
-                    downStrs += getDownLink(cName, episodeNumber);
-                }
-                saveDownLink(cName, downStrs);
+                getDCount.run()
+                .then(count=>{
+                    if (count < 1) {
+                        count = 1;
+                    }
+                    downCount=count;
+                    let downStrs = "";
+                    for (let episodeNumber = 1; episodeNumber <= downepisodeNumber; episodeNumber++) {
+                        downStrs += getDownLink(cName, episodeNumber);
+                    }
+                    saveDownLink(cName, downStrs);
+                })
+              
             }
         );
 }
