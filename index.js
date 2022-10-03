@@ -7,39 +7,24 @@ const { MultiSelect } = require('enquirer');
 const { NumberPrompt } = require('enquirer');
 const cheerio = require('cheerio');
 const fs = require('fs');
-const isEmpty = str => (str == null || str == `` || str === `undefined`)
-//js字符串转换位Unicode编码 
-function utf8ToUnicode(text) {
-    const code = text;
-    let resultStr = "";
-    for (var i = 0; i < code.length; i++) {
-        const c = code.charCodeAt(i);
-        resultStr += `&#x${c.toString(16).toUpperCase()};`;
-    }
-    return resultStr;
-}
-//Unicode编码转换为js字符串
-function unicodeToUtf8(text) {
-    const code = text.replace(/&#x(.{4});/g, "%u\$1");
-    let resultStr = unescape(code);
-    return resultStr;
-}
-
-
+const isEmpty = str => (str == null || str == `` || str === `undefined`);//判断是否为空
 let downFName = 'download';//下载文件夹名称
 let cartoonDowns = new Map();//番剧下载信息（包括下载链接，番号）
 let episodeCount = 1; //获取最新集数
 let downepisodeNumber = 1;//用户下载集数
 let downCount = 1;//用户每集下载数量
 let downfactor = 1;//下载因子
+
 function saveDownLink(cartoonName, downStr) {
     //检测下载文件夹是否存在
     if (!fs.existsSync(downFName)) {
         //无则创建文件夹
         fs.mkdirSync(downFName);
+        //写入文件
         fs.writeFileSync(path.join(process.cwd(), `${downFName}/${cartoonName}_BitComet.txt`), downStr, 'utf-8');
     }
     else {
+         //写入文件
         fs.writeFileSync(path.join(process.cwd(), `${downFName}/${cartoonName}_BitComet.txt`), downStr, 'utf-8');
     }
 }
@@ -49,10 +34,10 @@ function getDownLink(cartoonName, episodeNumber) {
     let downStr = "";
     let resultStr = "";
     let numberKeys = Array.from(cartoonDowns.keys());
-     let eCount = 1;
+    let eCount = 1;
 
     numberKeys.forEach(index => {
-
+        
         let number = parseInt(index.split(':')[0]);
         if (number == -1) {
             number = 1;
@@ -64,7 +49,7 @@ function getDownLink(cartoonName, episodeNumber) {
         if (number == episodeNumber) {
 
             downStr += `${cartoonDowns.get(index)}\n`;
-             eCount++;
+            eCount++;
         }
     });
 
@@ -100,6 +85,7 @@ async function getDownLinks(url, subtitleName) {
             }
             //混入因子值，保证键的独特性
             episodeNumber = `${number}:${downfactor}`;
+
             cartoonDowns.set(episodeNumber, downLink);
             downfactor++;
             cartoonInfoCount++;
@@ -113,6 +99,7 @@ async function getDownLinks(url, subtitleName) {
             //-1表示为剧场版
             //混入i值，保证键的独特性
             cartoonDowns.set(`-1:${downfactor}`, downLinks[i]);
+            //混合因子+1
             downfactor++;
         }
     }
@@ -138,6 +125,7 @@ function Linkhandle(cName) {
         name: 'EpisodeCount',
         message: `输入下载集数:请输入1到${episodeCount}(最新集数，超出边界的数字视为边界值)`
     });
+    //获取每集下载数量
     const getDCount = new NumberPrompt({
         name: 'EpisodeDount',
         message: `选择每集下载数量:(至少1集，最多集数受资源数量，超出边界的数字视为边界值)`
@@ -150,18 +138,18 @@ function Linkhandle(cName) {
                 }
                 downepisodeNumber = count;
                 getDCount.run()
-                .then(count=>{
-                    if (count < 1) {
-                        count = 1;
-                    }
-                    downCount=count;
-                    let downStrs = "";
-                    for (let episodeNumber = 1; episodeNumber <= downepisodeNumber; episodeNumber++) {
-                        downStrs += getDownLink(cName, episodeNumber);
-                    }
-                    saveDownLink(cName, downStrs);
-                })
-              
+                    .then(count => {
+                        if (count < 1) {
+                            count = 1;
+                        }
+                        downCount = count;
+                        let downStrs = "";
+                        for (let episodeNumber = 1; episodeNumber <= downepisodeNumber; episodeNumber++) {
+                            downStrs += getDownLink(cName, episodeNumber);
+                        }
+                        saveDownLink(cName, downStrs);
+                    })
+
             }
         );
 }
