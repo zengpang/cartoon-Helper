@@ -12,7 +12,7 @@ let downFName = 'download';//下载文件夹名称
 let cartoonDowns = new Map();//番剧下载信息（包括下载链接，番剧集数）
 let episodeCount = 1; //获取最新集数
 let downepisodeNumber = 1;//用户下载集数
-let downCount = 1;//用户每集下载数量
+let downCount = 1;//用户每集下载资源数量
 let downfactor = 1;//下载因子
 //通过链接获取访问页面HTML内容
 async function getpageContent(url)
@@ -40,7 +40,9 @@ function getDownLink(cartoonName, episodeNumber) {
     let downStr = "";
     //返回字符串
     let resultStr = "";
+    //获取所有番剧下载资源的集数
     let numberKeys = Array.from(cartoonDowns.keys());
+    //当前资源
     let eCount = 1;
     //遍历番剧下载信息键值对数组
     numberKeys.forEach(index => {
@@ -48,34 +50,43 @@ function getDownLink(cartoonName, episodeNumber) {
         let number = parseInt(index.split(':')[0]);
         //如果番剧集数为-1，即
         if (number == -1) {
+            //则判断番剧为剧场版,
             number = 1;
         }
+        //如果当前下载资源数量大于用户下载，则终止函数
         if (eCount > downCount) {
-
+            
             return;
         }
+        //如果集数与输入集数相等
         if (number == episodeNumber) {
-
+            //则将该集的下载链接添加到下载链接字符串中
             downStr += `${cartoonDowns.get(index)}\n`;
+            //当前下载资源数量+1
             eCount++;
         }
     });
-    //
+    //如果下载字符串为空
     if (downStr == "") {
+        //判断资源缺失
         downStr = "资源缺失\n";
     }
+    
     resultStr = `————————————————————${cartoonName}第${episodeNumber}集————————————————————\n${downStr}\n`;
+    //返回单集下载资源链接字符串
     return resultStr;
 }
-//获取单个字幕组资源链接
+//获取单个字幕组资源下载页面中的番剧链接
 async function getDownLinks(url, subtitleName) {
     let body =await getpageContent(url);
     let $ = cheerio.load(body);
-    let downLinks = new Array();
-    let cartoonInfoCount = 0;
+    let downLinks = new Array();//下载链接
+    let cartoonInfoCount = 0;//番剧集数
+     //根据选择器字符串获取所有装载番剧名称与链接的HTML元素，并遍历
     $('table.table.table-striped.tbl-border.fadeIn tbody tr td:nth-child(1)').each(function (i, elem) {
         //根据正则表达式获取符合集数格式的字符串集合
         let cartoonInfo = $(this).children(".magnet-link-wrap").text().match(/(- (\d)(\d)*)|((\[(\d)(\d)*\])|(【(\d)(\d)*】))/g);
+        //获取番剧
         let downLink = $(this).children(".js-magnet.magnet-link").data('clipboard-text');
         //[ '[06]' ]
         if (downLink != null) {
@@ -83,20 +94,22 @@ async function getDownLinks(url, subtitleName) {
             //获取页面所有下载链接
             downLinks.push(downLink);
         }
+        //如果集数不为空且链接不为空
         if (cartoonInfo != null && downLink != null) {
-            
+            //对获取集数数字
             let episodeNumber = cartoonInfo[0].replace(/(- )|((\[)|(\])|(【)|(】))/g, "");
             //获取最新集数
             let number = parseInt(episodeNumber);
+            //如果当前集数为number，则将当前值赋予number，保证number为最大值
             if (number > episodeCount) {
                 episodeCount = number;
             }
-            //混入因子值，保证键的独特性,键的格式为 番剧集数
+            //混入因子值，保证键的独特性,键的格式为 番剧集数:因子值
             episodeNumber = `${number}:${downfactor}`;
-
             cartoonDowns.set(episodeNumber, downLink);
              //混合因子+1
             downfactor++;
+            //集数+1
             cartoonInfoCount++;
         }
 
@@ -113,9 +126,10 @@ async function getDownLinks(url, subtitleName) {
         }
     }
     console.log(`正在获取${subtitleName}资源`);
+    //延迟请求，避免出现频繁请求导致请求被拒绝
     await new Promise(resolve => setTimeout(resolve, 200));
 }
-//获取番剧下载资源
+//获取选中字幕组的下载资源
 async function getDownResource(subtitleNames, subtitleMaps) {
     for (let index = 0; index < subtitleNames.length; index++) {
         //获取番剧字幕组名称
@@ -145,10 +159,12 @@ function Linkhandle(cName) {
     getECount.run()
         .then(
             count => {
-                //检测用户输入每集下载次数是否小于1
+                //检测用户输入每集下载次数是否小于1或者大于当前动漫集数
                 if (count < 1 || count > episodeCount) {
+                    //如果是则设置count为边界值
                     count = (count < 1 ? 1 : episodeCount);
                 }
+                
                 downepisodeNumber = count;
                 getDCount.run()
                     .then(count => {
@@ -157,8 +173,11 @@ function Linkhandle(cName) {
                             //如果是则设置为1
                             count = 1;
                         }
+                        //设置每集下载次数
                         downCount = count;
+                        //下载链接字符串
                         let downStrs = "";
+
                         for (let episodeNumber = 1; episodeNumber <= downepisodeNumber; episodeNumber++) {
                             downStrs += getDownLink(cName, episodeNumber);
                         }
@@ -168,7 +187,7 @@ function Linkhandle(cName) {
             }
         );
 }
-//获取番剧下载信息
+//获取番剧所有字幕组下载资源信息
 async function getDownInfo(selectCartoon) {
     //番剧信息页面链接
     let url = selectCartoon.cartoonDPage;
@@ -184,22 +203,22 @@ async function getDownInfo(selectCartoon) {
     //番剧格式 https://mikanani.me/Home/ExpandEpisodeTable?bangumiId=2775&subtitleGroupId=213&take=65
     //剧场版格式 https://mikanani.me/Home/ExpandEpisodeTable?bangumiId=2239&subtitleGroupId=552&take=65
 
-    let subtitleInfos = new Array();//字幕组信息
-    let subtitleMaps = new Map();
+    let subtitleInfos = new Array();//字幕组信息数组
+    let subtitleMaps = new Map();//字幕组键值对数组
     $('.leftbar-item span a.subgroup-name').each(function (i, elem) {
         let subtitlename = $(this).text();//字幕组名称
         let subtitleid = $(this).data('anchor').replace('#', '');//字幕组id
         let subtitlepage = `${homeUrl}/Home/ExpandEpisodeTable?bangumiId=${cid}&subtitleGroupId=${subtitleid}&take=65`;//字幕组资源页面链接
-        let subtitleInfo = { name: subtitlename, value: subtitlepage };//字幕组对象
-        subtitleInfos.push(subtitleInfo);
-        subtitleMaps.set(subtitlename, subtitlepage);
+        let subtitleInfo = { name: subtitlename, value: subtitlepage };//单个字幕组信息，包含字幕组名称于字幕组资源链接
+        subtitleInfos.push(subtitleInfo);//字幕组信息数组添加字幕组信息
+        subtitleMaps.set(subtitlename, subtitlepage);//字幕组键值对数组添加键值对，键值对以字幕组名称为键，字幕组资源链接为值
     });
     //获取番剧资源来源
     const getDSource = new MultiSelect({
         name: 'DownSource',
         message: `选择番剧资源来源处(可多选，多选则从多个来源获取资源,空格键选择，回车键确认)`,
-        limit: subtitleInfos.length,
-        choices: subtitleInfos,
+        limit: subtitleInfos.length,//最多可选个数，这里设定为字幕组信息数组长度，即支持全选
+        choices: subtitleInfos,//多选菜单数据来源
 
     });
     getDSource.run()
